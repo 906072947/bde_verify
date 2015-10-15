@@ -549,18 +549,22 @@ struct report : public RecursiveASTVisitor<report>
         // Preprocessor callback for macro definition.
 
     void operator()(Token const&          token,
-                    MacroDirective const *md,
+                    const MacroDefinition&md);
+        // Preprocessor callback for macro undefinition.
+
+    void operator()(Token const&          token,
+                    const MacroDefinition&md,
                     SourceRange           range,
                     MacroArgs const      *);
         // Preprocessor callback for macro expanding.
 
     void operator()(SourceLocation        where,
                     const Token&          token,
-                    const MacroDirective *md);
+                    const MacroDefinition&md);
         // Preprocessor callback for 'ifdef'/'ifndef'.
 
     void operator()(const Token&          token,
-                    const MacroDirective *md,
+                    const MacroDefinition&md,
                     SourceRange           range);
         // Preprocessor callback for 'defined(.)'.
 
@@ -920,18 +924,19 @@ bool report::is_named(Token const& token, llvm::StringRef name)
            token.getIdentifierInfo()->getName() == name;
 }
 
-// MacroDefined
 // MacroUndefined
+void report::operator()(Token const&          token,
+                        const MacroDefinition&md)
+{
+    if (is_named(token, "std")) {
+        d_data.d_bsl_overrides_std = false;
+    }
+}
+
+// MacroDefined
 void report::operator()(Token const&          token,
                         MacroDirective const *md)
 {
-    if (d_type == PPObserver::e_MacroUndefined) {
-        if (is_named(token, "std")) {
-            d_data.d_bsl_overrides_std = false;
-        }
-        return;                                                       // RETURN
-    }
-
     SourceManager& m = d_analyser.manager();
     SourceLocation sl = token.getLocation();
     FileID fid = m.getFileID(sl);
@@ -989,12 +994,12 @@ void report::operator()(Token const&          token,
 
 // MacroExpands
 void report::operator()(Token const&          token,
-                        MacroDirective const *md,
+                        const MacroDefinition&md,
                         SourceRange           range,
                         MacroArgs const      *)
 {
     llvm::StringRef macro = token.getIdentifierInfo()->getName();
-    const MacroInfo *mi = md->getMacroInfo();
+    const MacroInfo *mi = md.getMacroInfo();
     SourceManager& m = d_analyser.manager();
     Location loc(m, range.getBegin());
     FileType ft = classify(loc.file());
@@ -1087,7 +1092,7 @@ bool report::is_guard_for(const Token& token, SourceLocation sl)
 // Ifndef
 void report::operator()(SourceLocation        where,
                         const Token&          token,
-                        const MacroDirective *)
+                        const MacroDefinition&)
 {
     clear_guard();
 
@@ -1115,7 +1120,7 @@ void report::operator()(SourceLocation        where,
 
 // Defined
 void report::operator()(const Token&          token,
-                        const MacroDirective *,
+                        const MacroDefinition&,
                         SourceRange           range)
 {
     clear_guard();

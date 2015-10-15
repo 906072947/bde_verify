@@ -129,8 +129,8 @@ struct report : public RecursiveASTVisitor<report>, public Report<data>
         // Check indentation.
 
     void operator()(const Token &token,
-                    const MacroDirective *md,
-                    SourceRange,
+                    const MacroDefinition&,
+                    SourceRange range,
                     const MacroArgs *);
         // Macro expansion.
 
@@ -576,7 +576,7 @@ bool report::VisitVarDecl(VarDecl *vd)
 }
 
 void report::operator()(const Token &token,
-                        const MacroDirective *md,
+                        const MacroDefinition&,
                         SourceRange range,
                         MacroArgs const *args)
 {

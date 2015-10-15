@@ -545,22 +545,26 @@ struct report : public RecursiveASTVisitor<report>, Report<data>
         // Return 'true' iff the specified 'token' is the specified 'name'.
 
     void operator()(Token const&          token,
-                    MacroDirective const *md,
+                    const MacroDefinition&md,
                     SourceRange           range,
                     MacroArgs const      *);
         // Preprocessor callback for macro expanding.
 
     void operator()(Token const&          token,
                     MacroDirective const *md);
-        // Preprocessor callback for macro (un)defined.
+        // Preprocessor callback for macro defined.
+
+    void operator()(Token const&          token,
+                    const MacroDefinition&md);
+        // Preprocessor callback for macro undefined.
 
     void operator()(SourceLocation        where,
                     const Token&          token,
-                    const MacroDirective *md);
+                    const MacroDefinition&md);
         // Preprocessor callback for 'ifdef'/'ifndef'.
 
     void operator()(const Token&          token,
-                    const MacroDirective *md,
+                    const MacroDefinition&md,
                     SourceRange           range);
         // Preprocessor callback for 'defined(.)'.
 
@@ -850,12 +854,12 @@ bool report::is_named(Token const& token, llvm::StringRef name)
 
 // MacroExpands
 void report::operator()(Token const&          token,
-                        MacroDirective const *md,
+                        const MacroDefinition&md,
                         SourceRange           range,
                         MacroArgs const      *)
 {
     llvm::StringRef macro = token.getIdentifierInfo()->getName();
-    const MacroInfo *mi = md->getMacroInfo();
+    const MacroInfo *mi = md.getMacroInfo();
     Location loc(m, mi->getDefinitionLoc());
     if (loc && !range.getBegin().isMacroID() && macro != "std") {
         require_file(
@@ -866,13 +870,23 @@ void report::operator()(Token const&          token,
     }
 }
 
-// MacroDefined/MacroUndefined
+// MacroDefined
 void report::operator()(Token const&          token,
                         MacroDirective const *md)
 {
     llvm::StringRef macro = token.getIdentifierInfo()->getName();
     if (macro == "BSL_OVERRIDES_STD") {
-        d.d_ovr = d_type == PPObserver::e_MacroDefined;
+        d.d_ovr = true;
+    }
+}
+
+// MacroUndefined
+void report::operator()(Token const&          token,
+                        const MacroDefinition&md)
+{
+    llvm::StringRef macro = token.getIdentifierInfo()->getName();
+    if (macro == "BSL_OVERRIDES_STD") {
+        d.d_ovr = false;
     }
 }
 
@@ -923,7 +937,7 @@ bool report::is_guard_for(const Token& token, SourceLocation sl)
 // Ifndef
 void report::operator()(SourceLocation        where,
                         const Token&          token,
-                        const MacroDirective *)
+                        const MacroDefinition&)
 {
     llvm::StringRef tn = token.getIdentifierInfo()->getName();
 
@@ -936,7 +950,7 @@ void report::operator()(SourceLocation        where,
 
 // Defined
 void report::operator()(const Token&          token,
-                        const MacroDirective *,
+                        const MacroDefinition&,
                         SourceRange           range)
 {
     clear_guard();

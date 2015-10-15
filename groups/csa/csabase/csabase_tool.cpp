@@ -23,6 +23,7 @@
 #include <llvm/Support/PrettyStackTrace.h>
 #include <llvm/Support/Process.h>
 #include <llvm/Support/Signals.h>
+#include <llvm/Support/StringSaver.h>
 #include <llvm/Support/TargetSelect.h>
 #include <stdlib.h>
 #include <set>
@@ -41,17 +42,6 @@ static void LLVMErrorHandler(void *UserData, const std::string &Message,
     exit(GenCrashDiag ? 70 : 1);
 }
 
-namespace {
-    class StringSetSaver : public cl::StringSaver {
-      public:
-        const char *SaveString(const char *Str) override {
-            return Storage.insert(Str).first->c_str();
-        }
-      private:
-        std::set<std::string> Storage;
-    };
-}
-
 // -----------------------------------------------------------------------------
 
 int csabase::run(int argc_, const char **argv_)
@@ -60,14 +50,15 @@ int csabase::run(int argc_, const char **argv_)
     PrettyStackTraceProgram X(argc_, argv_);
 
     SmallVector<const char *, 1024> argv;
-    SpecificBumpPtrAllocator<char>  ArgAllocator;
-    StringSetSaver                  Saver;
+    SpecificBumpPtrAllocator<char>  arg_allocator;
+    BumpPtrAllocator                allocator;
+    BumpPtrStringSaver              saver(allocator);
 
     sys::Process::GetArgumentVector(argv,
                                     ArrayRef<const char *>(argv_, argc_),
-                                    ArgAllocator);
+                                    arg_allocator);
 
-    cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, argv);
+    cl::ExpandResponseFiles(saver, cl::TokenizeGNUCommandLine, argv);
 
     argv.insert(argv.begin() == argv.end() ? argv.begin() : argv.begin() + 1,
                 "-xc++");

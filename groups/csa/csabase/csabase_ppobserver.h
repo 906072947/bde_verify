@@ -38,25 +38,25 @@ public:
     void detach();
     clang::CommentHandler* get_comment_handler();
 
-    utils::event<void(clang::SourceLocation, bool, std::string const&)>               onInclude;
+    utils::event<void(clang::SourceLocation, bool, llvm::StringRef)>               onInclude;
     utils::event<
-        void(clang::SourceLocation, std::string const &, std::string const &)>
+        void(clang::SourceLocation, llvm::StringRef, llvm::StringRef)>
     onOpenFile;
     utils::event<
-        void(clang::SourceLocation, std::string const &, std::string const &)>
+        void(clang::SourceLocation, llvm::StringRef, llvm::StringRef)>
     onCloseFile;
-    utils::event<void(std::string const&, std::string const&)>                        onSkipFile;
-    utils::event<void(std::string const&)>                                            onFileNotFound;
-    utils::event<void(std::string const &,
+    utils::event<void(llvm::StringRef, llvm::StringRef)>                        onSkipFile;
+    utils::event<void(llvm::StringRef)>                                            onFileNotFound;
+    utils::event<void(llvm::StringRef,
                       clang::PPCallbacks::FileChangeReason)> onOtherFile;
-    utils::event<void(clang::SourceLocation, std::string const&)>                     onIdent;
-    utils::event<void(clang::SourceLocation, std::string const&)>                     onPragma;
+    utils::event<void(clang::SourceLocation, llvm::StringRef)>                     onIdent;
+    utils::event<void(clang::SourceLocation, llvm::StringRef)>                     onPragma;
     utils::event<void(clang::Token const &,
-                      clang::MacroDirective const *,
+                      clang::MacroDefinition const&,
                       clang::SourceRange,
                       clang::MacroArgs const*)> onMacroExpands;
     utils::event<void(clang::Token const&, clang::MacroDirective const*)>                  onMacroDefined;
-    utils::event<void(clang::Token const&, clang::MacroDirective const*)>                  onMacroUndefined;
+    utils::event<void(clang::Token const&, clang::MacroDefinition const&)>                  onMacroUndefined;
     utils::event<void(clang::SourceLocation, clang::SourceRange)>                     onIf;
     utils::event<void(clang::SourceLocation, clang::SourceRange)>                     onElif;
     utils::event<void(clang::SourceLocation, clang::Token const&)>                    onIfdef;
@@ -149,7 +149,7 @@ public:
 
     utils::event<decltype(&Base::EndOfMainFile)> onPPEndOfMainFile;
 
-    void Ident(clang::SourceLocation Loc, const std::string &Str)
+    void Ident(clang::SourceLocation Loc, llvm::StringRef Str)
     override;
 
     utils::event<decltype(&Base::Ident)> onPPIdent;
@@ -162,14 +162,14 @@ public:
 
     void PragmaComment(clang::SourceLocation         Loc,
                        const clang::IdentifierInfo  *Kind,
-                       const std::string&            Str)
+                       llvm::StringRef             Str)
     override;
 
     utils::event<decltype(&Base::PragmaComment)> onPPPragmaComment;
 
     void PragmaDetectMismatch(clang::SourceLocation     Loc,
-                              const std::string        &Name,
-                              const std::string        &Value)
+                              llvm::StringRef Name,
+                              llvm::StringRef Value)
     override;
 
     utils::event<decltype(&Base::PragmaDetectMismatch)>
@@ -238,7 +238,7 @@ public:
     utils::event<decltype(&Base::PragmaWarningPop)> onPPPragmaWarningPop;
 
     void MacroExpands(const clang::Token&          MacroNameTok,
-                      const clang::MacroDirective *MD,
+                      clang::MacroDefinition const&MD,
                       clang::SourceRange           Range,
                       const clang::MacroArgs      *Args)
     override;
@@ -252,13 +252,13 @@ public:
     utils::event<decltype(&Base::MacroDefined)> onPPMacroDefined;
 
     void MacroUndefined(const clang::Token&          MacroNameTok,
-                        const clang::MacroDirective *MD)
+                        clang::MacroDefinition const&MD)
     override;
 
     utils::event<decltype(&Base::MacroUndefined)> onPPMacroUndefined;
 
     void Defined(const clang::Token&          MacroNameTok,
-                 const clang::MacroDirective *MD,
+                 clang::MacroDefinition const&MD,
                  clang::SourceRange           Range)
     override;
 
@@ -286,14 +286,14 @@ public:
 
     void Ifdef(clang::SourceLocation        Loc,
                const clang::Token&          MacroNameTok,
-               const clang::MacroDirective *MD)
+               clang::MacroDefinition const&MD)
     override;
 
     utils::event<decltype(&Base::Ifdef)> onPPIfdef;
 
     void Ifndef(clang::SourceLocation        Loc,
                 const clang::Token&          MacroNameTok,
-                const clang::MacroDirective *MD)
+                clang::MacroDefinition const&MD)
     override;
 
     utils::event<decltype(&Base::Ifndef)> onPPIfndef;
@@ -316,25 +316,25 @@ private:
     PPObserver(PPObserver const&);
     void operator=(PPObserver const&);
 
-    void do_include_file(clang::SourceLocation, bool, std::string const&);
+    void do_include_file(clang::SourceLocation, bool, llvm::StringRef );
     void do_open_file(clang::SourceLocation,
-                      std::string const &,
-                      std::string const &);
+                      llvm::StringRef ,
+                      llvm::StringRef );
     void do_close_file(clang::SourceLocation,
-                       std::string const &,
-                       std::string const &);
-    void do_skip_file(std::string const&, std::string const&);
-    void do_file_not_found(std::string const&);
+                       llvm::StringRef ,
+                       llvm::StringRef );
+    void do_skip_file(llvm::StringRef , llvm::StringRef );
+    void do_file_not_found(llvm::StringRef );
     void
-    do_other_file(std::string const &, clang::PPCallbacks::FileChangeReason);
-    void do_ident(clang::SourceLocation, std::string const&);
-    void do_pragma(clang::SourceLocation, std::string const&);
+    do_other_file(llvm::StringRef , clang::PPCallbacks::FileChangeReason);
+    void do_ident(clang::SourceLocation, llvm::StringRef );
+    void do_pragma(clang::SourceLocation, llvm::StringRef );
     void do_macro_expands(clang::Token const &,
-                          clang::MacroDirective const *,
+                          clang::MacroDefinition const&,
                           clang::SourceRange,
                           clang::MacroArgs const *);
     void do_macro_defined(clang::Token const&, clang::MacroDirective const*);
-    void do_macro_undefined(clang::Token const&, clang::MacroDirective const*);
+    void do_macro_undefined(clang::Token const&, clang::MacroDefinition const&);
     void do_if(clang::SourceLocation, clang::SourceRange);
     void do_elif(clang::SourceLocation, clang::SourceRange);
     void do_ifdef(clang::SourceLocation, clang::Token const&);

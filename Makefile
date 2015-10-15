@@ -22,7 +22,7 @@ CXXFLAGS   += -m64 -std=c++11
 CXXFLAGS   += -Wall -Wno-unused-local-typedefs
 
 CXXFLAGS   += -DSPELL_CHECK=1
-INCFLAGS   += -I$(PREFIX)/include -I/opt/swt/include
+INCFLAGS   += -I$(LLVMDIR)/include -I$(PREFIX)/include -I/opt/swt/include
 
 # Set up locations and flags for the compiler that will build bde_verify.
 ifeq ($(notdir $(CXX)),clang++)

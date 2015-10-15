@@ -91,7 +91,7 @@ static void onCloseFile(Analyser* analyser,
 
 static void onMacroDefined(Analyser* analyser,
                            Token const& token,
-                           MacroDirective const* info)
+                           MacroDirective const*)
 {
     leaking_macro& context(analyser->attachment<leaking_macro>());
     std::string source(token.getIdentifierInfo()->getNameStart());
@@ -100,7 +100,7 @@ static void onMacroDefined(Analyser* analyser,
 
 static void onMacroUndefined(Analyser* analyser,
                              Token const& token,
-                             MacroDirective const* info)
+                             MacroDefinition const&)
 {
     leaking_macro& context(analyser->attachment<leaking_macro>());
     std::string source(token.getIdentifierInfo()->getNameStart());

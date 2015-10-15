@@ -79,71 +79,71 @@ std::string csabase::PPObserver::get_file(SourceLocation location) const
 
 void csabase::PPObserver::do_include_file(SourceLocation location,
                                           bool is_angled,
-                                          std::string const& file)
+                                          llvm::StringRef  file)
 {
-    std::string msg("do_include_file '" + file + "' angled=" +
+    std::string msg("do_include_file '" + file.str() + "' angled=" +
                     (is_angled ? "true" : "false"));
     Debug d(msg.c_str());
     onInclude(location, is_angled, file);
 }
 
 void csabase::PPObserver::do_open_file(SourceLocation location,
-                                       std::string const& from,
-                                       std::string const& file)
+                                       llvm::StringRef  from,
+                                       llvm::StringRef  file)
 {
-    std::string msg("do_open_file '" + file + "'");
+    std::string msg("do_open_file '" + file.str() + "'");
     Debug d(msg.c_str());
     onOpenFile(location, from, file);
 }
 
 void csabase::PPObserver::do_close_file(SourceLocation location,
-                                        std::string const& from,
-                                        std::string const& file)
+                                        llvm::StringRef  from,
+                                        llvm::StringRef  file)
 {
-    std::string msg("do_close_file '" + file + "'");
+    std::string msg("do_close_file '" + file.str() + "'");
     Debug d(msg.c_str());
     onCloseFile(location, from, file);
 }
 
-void csabase::PPObserver::do_skip_file(std::string const& from,
-                                       std::string const& file)
+void csabase::PPObserver::do_skip_file(llvm::StringRef  from,
+                                       llvm::StringRef  file)
 {
-    std::string msg("do_skip_file(" + from + ", " + file + ")");
+    std::string msg("do_skip_file(" + from.str() + ", " + file.str() + ")");
     Debug d(msg.c_str());
     onSkipFile(from, file);
 }
 
-void csabase::PPObserver::do_file_not_found(std::string const& file)
+void csabase::PPObserver::do_file_not_found(llvm::StringRef  file)
 {
-    std::string msg("do_file_not_found(" + file + ")");
+    std::string msg("do_file_not_found(" + file.str() + ")");
     Debug d(msg.c_str());
     onFileNotFound(file);
 }
 
-void csabase::PPObserver::do_other_file(std::string const& file,
+void csabase::PPObserver::do_other_file(llvm::StringRef  file,
                                         PPCallbacks::FileChangeReason reason)
 {
-    std::string msg("do_other_file '" + file + "'");
+    std::string msg("do_other_file '" + file.str() + "'");
     Debug d(msg.c_str());
     onOtherFile(file, reason);
 }
 
 void csabase::PPObserver::do_ident(SourceLocation location,
-                                   std::string const& ident)
+                                   llvm::StringRef  ident)
 {
     Debug d("do_ident");
     onIdent(location, ident);
 }
 
 void csabase::PPObserver::do_pragma(SourceLocation location,
-                                    std::string const& value)
+                                    llvm::StringRef  value)
 {
     Debug d("do_pragma");
     onPragma(location, value);
 }
 
 void csabase::PPObserver::do_macro_expands(Token const& token,
-                                           const MacroDirective* macro,
+                                           const MacroDefinition& macro,
                                            SourceRange range,
                                            MacroArgs const* args)
 {
@@ -159,7 +159,7 @@ void csabase::PPObserver::do_macro_defined(Token const& token,
 }
 
 void csabase::PPObserver::do_macro_undefined(Token const& token,
-                                             const MacroDirective* macro)
+                                             const MacroDefinition& macro)
 {
     Debug d("do_macro_undefined");
     onMacroUndefined(token, macro);
@@ -278,7 +278,7 @@ bool csabase::PPObserver::FileNotFound(llvm::StringRef name,
 // -----------------------------------------------------------------------------
 
 void
-csabase::PPObserver::Ident(SourceLocation location, std::string const& ident)
+csabase::PPObserver::Ident(SourceLocation location, llvm::StringRef  ident)
 {
     onPPIdent(location, ident);
 
@@ -366,7 +366,7 @@ void csabase::PPObserver::PragmaDirective(SourceLocation location,
 
 void csabase::PPObserver::PragmaComment(SourceLocation location,
                                         IdentifierInfo const *id,
-                                        std::string const& value)
+                                        llvm::StringRef  value)
 {
     onPPPragmaComment(location, id, value);
 
@@ -374,8 +374,8 @@ void csabase::PPObserver::PragmaComment(SourceLocation location,
 }
 
 void csabase::PPObserver::PragmaDetectMismatch(SourceLocation loc,
-                                               const std::string& name,
-                                               const std::string& value)
+                                               llvm::StringRef  name,
+                                               llvm::StringRef  value)
 {
     onPPPragmaDetectMismatch(loc, name, value);
 }
@@ -444,7 +444,7 @@ void csabase::PPObserver::PragmaMessage(SourceLocation location,
 // -----------------------------------------------------------------------------
 
 void csabase::PPObserver::MacroExpands(Token const& token,
-                                       const MacroDirective* macro,
+                                       const MacroDefinition& macro,
                                        SourceRange range,
                                        const MacroArgs* args)
 {
@@ -462,7 +462,7 @@ void csabase::PPObserver::MacroDefined(Token const& token,
 }
 
 void csabase::PPObserver::MacroUndefined(Token const& token,
-                                         const MacroDirective* macro)
+                                         const MacroDefinition& macro)
 {
     onPPMacroUndefined(token, macro);
 
@@ -470,7 +470,7 @@ void csabase::PPObserver::MacroUndefined(Token const& token,
 }
 
 void csabase::PPObserver::Defined(const Token& token,
-                                  const MacroDirective* macro,
+                                  const MacroDefinition& macro,
                                   SourceRange range)
 {
     onPPDefined(token, macro, range);
@@ -504,7 +504,7 @@ void csabase::PPObserver::Elif(SourceLocation loc,
 
 void csabase::PPObserver::Ifdef(SourceLocation loc,
                                 Token const& token,
-                                const MacroDirective* md)
+                                const MacroDefinition& md)
 {
     onPPIfdef(loc, token, md);
 
@@ -513,7 +513,7 @@ void csabase::PPObserver::Ifdef(SourceLocation loc,
 
 void csabase::PPObserver::Ifndef(SourceLocation loc,
                                  Token const& token,
-                                 const MacroDirective* md)
+                                 const MacroDefinition& md)
 {
     onPPIfndef(loc, token, md);
 
