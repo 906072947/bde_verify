@@ -50,6 +50,7 @@ Options
 --exe binary          bde_verify executable file
 --cc compiler         C++ compiler used to find system include directories
 --definc              set up default include paths
+--diff file           restrict output using git diff in file (``-`` for stdin)
 --nodefinc            do not set up default include paths
 --defdef              set up default macro definitions
 --nodefdef            do not set up default macro definitions
@@ -76,6 +77,20 @@ Options
 -W warning            enable warning
 -f flag               specify compiler flag
 -w                    disable normal compiler warnings
+
+Git-Diff Output Restriction
+---------------------------
+The output of |bv| can be restricted to include only those warnings whose line
+numbers fall within a set of changes given by the output of a ``git diff``
+command.  Such output contains lines beginning with ``+++`` representing a file
+with changes and lines starting with ``@`` and containing ``+LINE_NUMBER`` or
+``+LINE_NUMBER,NUMBER_OF_LINES`` representing which lines in the file have
+changed.  Such diffs may be saved in a file and given to |bv| via the option
+``--diff=file`` or they may be piped into |bv| via the option ``--diff=-`` in
+which case standard input will be read for the diffs.
+
+Note that (for now) the file names upon which |bv| will operate must still be
+specified on the command line; they are not picked up from the diff.
 
 Configuration
 -------------
@@ -222,6 +237,11 @@ for additional checks.
      A class trait declaration does not mention its class name.
    * ``RV01``
      Function should return by value rather than through pointer parameter.
+   * ``AU01``
+     An allocator argument needs to be manually checked for appropriateness.
+     This is intended to catch assignment idioms like
+     ``MyClass(other, this->allocator()).swap(*this)`` that can exhaust
+     sequential allocators (but are sometimes necessary).
 
 .. only:: bde_verify or bb_cppverify
 
@@ -270,7 +290,7 @@ for additional checks.
    ``assert-assign``
    ++++++++++++++++++++++++
    * ``AE01``
-     Top-level macro condintion is an assignment.
+     Top-level macro condition is an assignment.
 
 .. only:: bde_verify
 
@@ -329,6 +349,18 @@ for additional checks.
 
 .. only:: bde_verify or bb_cppverify
 
+   ``bsl-std-string``
+   ++++++++++++++++++
+   This check warns that conversions between bsl::string and std::string
+   are occurring (in case they are inadvertant).
+
+   * ``ST01``
+     Converting std::string to bsl::string.
+   * ``ST02``
+     Converting bsl::string to std::string.
+
+.. only:: bde_verify or bb_cppverify
+
    ``c-cast``
    ++++++++++
    * ``CC01``
@@ -355,6 +387,50 @@ for additional checks.
    * ``ADC01``
      Passing the address of a single character as an argument to a
      ``const char *`` parameter.
+
+.. only:: bde_verify
+
+   ``class-sections``
+   ++++++++++++++++++
+   BDE coding standards require that class member declarations appear in tagged
+   sections (e.g., ``// MANIPULATORS``, ``// CREATORS``, et al.)
+
+   * ``KS00``
+     Declaration without tag.
+   * ``KS01``
+     Tag requires public declaration.
+   * ``KS02``
+     Tag requires private declaration.
+   * ``KS03``
+     Tag requires function declaration.
+   * ``KS04``
+     Tag requires instance data field declaration.
+   * ``KS05``
+     Tag requires static data field declaration.
+   * ``KS06``
+     Tag requires type declaration.
+   * ``KS07``
+     Tag requires const method declaration.
+   * ``KS08``
+     Tag requires non-const method declaration.
+   * ``KS09``
+     Constructor or destructor requires CREATORS tag.
+   * ``KS10``
+     Tag requires constant data declaration.
+   * ``KS11``
+     Tag requires static method declaration.
+   * ``KS12``
+     Tag requires free operator declaration.
+   * ``KS13``
+     Tag requires free function declaration.
+   * ``KS14``
+     Tag requires conversion operator declaration.
+   * ``KS15``
+     Friend declaration requires FRIENDS tag.
+   * ``KS16``
+     Tag requires friend declaration.
+   * ``KS17``
+     Tag requires protected declaration.
 
 .. only:: bde_verify
 
@@ -727,6 +803,21 @@ for additional checks.
    * ``CD01``
      Method defined directly in class definition.
 
+.. only:: bde_verify or bb_cppverify
+
+   ``member-names``
+   ++++++++++++++++
+   * ``MN01``
+     Class data members must be private.
+   * ``MN02``
+     Non-static class data member names must start with ``d_``.
+   * ``MN03``
+     Static class data member names must start with ``s_``.
+   * ``MN04``
+     Pointer class data member names must end in ``_p``.
+   * ``MN05``
+     Only pointer class data member names should end in ``_p``.
+
 .. only:: bde_verify
 
    ``mid-return``
@@ -813,6 +904,7 @@ for additional checks.
    (``BloombergLP``).  Appearances of the old name, elaborated or not, will be
    replaced by the specified new value.  E.g.,
    ``append refactor name(bdetu_DayOfWeek::Day::BDET_WEDNESDAY,e_WEDNESDAY)``.
+   Macro names may also be replaced this way; just specify the old and the new.
 
    * ``RX01``
      Errors in the refactor specification (not in the examined files).
@@ -820,6 +912,20 @@ for additional checks.
      Replacing included files.
    * ``RC01``
      Replacing a name.
+   * ``RD01``
+     Replacing forward class declaration.
+
+.. only:: bde_verify
+
+   ``refactor-config``
+   +++++++++++++++++++
+   Given pairs of old/new header files, generate a configuration file for the
+   ``refactor`` check from corresponding pairs of names appending to the file
+   specified by the configuration file parameter ``refactorfile`` (or the
+   default, "refactor.cfg" if left unspecified).
+
+   * ``DD01``
+     Eligible name for refactoring.
 
 .. only:: bde_verify or bb_cppverify
 
@@ -827,6 +933,18 @@ for additional checks.
    ++++++++++++++++++++++++++
    * ``AQa01``
      Global variable with runtime initialization.
+
+.. only:: bde_verify or bb_cppverify
+
+   ``short-compare``
+   ++++++++++++++++++++++++++
+   * ``US01``
+     Comparison between signed and unsigned short may cause unexpected
+     behavior.  Signed and unsigned shorts in expressions are both promoted
+     to integer, with sign-extension for signed short and zero-extension
+     for unsigned short.  Thus a signed short and an unsigned short with the
+     same bit values and the high bit set will convert to different integer
+     values.
 
 .. only:: bde_verify
 
@@ -877,6 +995,9 @@ for additional checks.
 
    ``swap-using``
    ++++++++++++++
+   Directly invoking ``std::swap`` or ``bsl::swap`` can prevent argument-
+   dependent lookup from finding overloads.
+
    * ``SU01``
      Prefer ``using std::swap; swap(...);'`` over ``std::swap(...);``.
 
@@ -1056,21 +1177,15 @@ See the README file at the top level of the source tree.
    ----------------------------------------------------------------------------
    Copyright (C) 2015 Bloomberg Finance L.P.
   
-   Permission is hereby granted, free of charge, to any person obtaining a copy
-   of this software and associated documentation files (the "Software"), to
-   deal in the Software without restriction, including without limitation the
-   rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-   sell copies of the Software, and to permit persons to whom the Software is
-   furnished to do so, subject to the following conditions:
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+   
+       http://www.apache.org/licenses/LICENSE-2.0
   
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
-  
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-   IN THE SOFTWARE.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
    ----------------------------- END-OF-FILE ----------------------------------
